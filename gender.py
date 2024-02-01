@@ -117,8 +117,7 @@ def test_model(model, loss_fn, dataloader, dataset_size, mode):
     )
 
     with torch.no_grad():
-        for i, (inputs, labels) in enumerate(dataloader["val"]):
-            print()
+        for i, (inputs, labels) in enumerate(dataloader):
             inputs, labels = inputs.to(device), labels.to(device)
 
             outputs = model(inputs)
