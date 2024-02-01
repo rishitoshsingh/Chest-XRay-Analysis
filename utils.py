@@ -149,9 +149,9 @@ def untransform_tensor(image):
     return untransformed_tensor
 
 
-def plot_images(images, predictions, targets, plot_file_path):
+def plot_images(images, predictions, targets, inv_label_map, plot_file_path):
     fig, axs = plt.subplots(4, 2, figsize=(8, 16))
-    inverse_label_mapping = {0: "up", 1: "right", 2: "down", 3: "left"}
+
     for i in range(4):
         for j in range(2):
             index = i * 2 + j
@@ -159,9 +159,9 @@ def plot_images(images, predictions, targets, plot_file_path):
             axs[i, j].imshow(image)
             axs[i, j].axis("off")
             axs[i, j].set_title(
-                f"Target: {inverse_label_mapping[targets[index].item()]}"
-                "\nPrediction:"
-                f" {inverse_label_mapping[predictions[index].item()]}"
+                "Target:"
+                f" {inv_label_map[targets[index].item()] if inv_label_map else targets[index].item()}\nPrediction:"
+                f" {inv_label_map[predictions[index].item()] if inv_label_map else targets[index].item()}"
             )
 
     os.makedirs("plots", exist_ok=True)

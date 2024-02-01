@@ -3,6 +3,7 @@ import os
 import warnings
 from datetime import datetime
 
+import datasets as warmup_datsets
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -298,9 +299,16 @@ if __name__ == "__main__":
         exp_directory, weight_filename = os.path.split(
             args.trained_weights_path
         )
+        if args.data == "direction":
+            inv_map = warmup_datsets.DirectionRGB.inverse_label_mapping
+        elif args.data == "gender":
+            inv_map = warmup_datsets.GenderRGB.inverse_label_mapping
+        elif args.data == "age":
+            inv_map = None
         utils.plot_images(
             last_batch_images[:8],
             last_batch_prediciton[:8],
             last_batch_target[:8],
+            inv_map,
             os.path.join(exp_directory, "test-results.png"),
         )

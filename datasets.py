@@ -44,6 +44,7 @@ class PracticeDICOM(Dataset):
 
 class DirectionRGB(Dataset):
     label_mapping = {"up": 0, "right": 1, "down": 2, "left": 3}
+    inverse_label_mapping = {0: "up", 1: "right", 2: "down", 3: "left"}
 
     def __init__(self, image_list_path, transform=None, target_transform=None):
         self.image_list_path = image_list_path
@@ -84,6 +85,7 @@ class DirectionRGB(Dataset):
 
 class GenderRGB(Dataset):
     label_mapping = {"male": 0, "female": 1}
+    inverse_label_mapping = {0: "male", 1: "female"}
 
     def __init__(
         self,
