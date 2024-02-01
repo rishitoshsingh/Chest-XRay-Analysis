@@ -91,7 +91,9 @@ def get_dataloaders(
             x: datasets.GenderRGB(
                 os.path.join(data_dir),
                 task=x,
-                transform=data_transforms[x],
+                transform=data_transforms[x]
+                if x != "test"
+                else data_transforms["val"],
             )
             for x in req_dataloaders
         }
@@ -100,7 +102,9 @@ def get_dataloaders(
             x: datasets.AgeRGB(
                 os.path.join(data_dir),
                 task=x,
-                transform=data_transforms[x],
+                transform=data_transforms[x]
+                if x != "test"
+                else data_transforms["val"],
             )
             for x in req_dataloaders
         }
