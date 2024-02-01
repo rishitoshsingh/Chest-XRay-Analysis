@@ -36,9 +36,9 @@ class WarmUpResNet(nn.Module):
         super(WarmUpResNet, self).__init__()
         self.n_classes = n_classes
         if backbone == "resnet18":
-            self.resnset = resnet18(weights=ResNet18_Weights.IMAGENET1K_V2)
+            self.resnset = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         elif backbone == "resset50":
-            self.resnset = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
+            self.resnset = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
         self.fc = nn.Linear(self.resnet18.fc.out_features, self.n_classes)
         if self.mode == "classification":
             self.logsftmx = nn.LogSoftmax(dim=1)
