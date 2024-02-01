@@ -35,6 +35,7 @@ class WarmUpResNet(nn.Module):
     ):
         super(WarmUpResNet, self).__init__()
         self.n_classes = n_classes
+        self.mode = mode
         if backbone == "resnet18":
             self.resnet = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         elif backbone == "resset50":
