@@ -53,7 +53,7 @@ class WarmUpResNet(nn.Module):
 
 
 def train_model(
-    model, loss_fn, optimizer, dataloaders, dataset_sizes, mode, num_epochs
+    model, loss_fn, optimizer, dataloaders, dataset_sizes, num_epochs, mode
 ):
     model.train()
     train_losses = []
