@@ -72,7 +72,9 @@ data_transforms = {
 }
 
 
-def dataloaders(data: str, data_dir: str, req_dataloaders=["train", "val"]):
+def get_dataloaders(
+    data: str, data_dir: str, req_dataloaders=["train", "val"]
+):
     if data == "direction":
         xray_datasets = {
             x: datasets.DirectionRGB(

@@ -266,9 +266,18 @@ if __name__ == "__main__":
             args.data, args.data_dir, ["test"]
         )
 
-        model = WarmUpResNet()
+        if args.data == "direction":
+            model = WarmUpResNet(4)
+            loss_fn = nn.NLLLoss()
+        elif args.data == "gender":
+            model = WarmUpResNet(2)
+            loss_fn = nn.NLLLoss()
+        elif args.data == "age":
+            model = WarmUpResNet(1, mode="regression")
+            loss_fn = nn.MSELoss()
+        optimizer = optim.SGD(model.parameters(), lr=args.lr)
         model.to(device)
-        loss_fn = nn.NLLLoss()
+
         if args.trained_weights_path:
             model.load_state_dict(torch.load(args.trained_weights_path))
         else:
