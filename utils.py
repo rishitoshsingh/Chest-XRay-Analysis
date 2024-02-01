@@ -123,7 +123,7 @@ def plot_loss(train_losses, val_losses, learning_rate, plot_file_path):
     plt.legend()
 
     plt.savefig(os.path.join("plots", plot_file_path))
-    plt.show()
+    # plt.show()
 
 
 def image_to_arrag(image):
@@ -162,4 +162,4 @@ def plot_images(images, predictions, targets, plot_file_path):
 
     os.makedirs("plots", exist_ok=True)
     plt.savefig(os.path.join("plots", plot_file_path))
-    plt.show()
+    # plt.show()
