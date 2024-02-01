@@ -252,7 +252,7 @@ if __name__ == "__main__":
             train_losses,
             val_losses,
             args.lr,
-            os.path.join(exp_directory, "loss-curve.pth"),
+            os.path.join(exp_directory, "loss-curve.png"),
         )
 
         # Save trained weights
