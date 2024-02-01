@@ -289,7 +289,11 @@ if __name__ == "__main__":
             last_batch_prediciton,
             last_batch_target,
         ) = test_model(
-            model, loss_fn, dataloaders["test"], dataset_sizes["test"]
+            model,
+            loss_fn,
+            dataloaders["test"],
+            dataset_sizes["test"],
+            args.mode,
         )
 
         exp_directory, weight_filename = os.path.split(
