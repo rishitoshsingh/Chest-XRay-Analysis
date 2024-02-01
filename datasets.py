@@ -43,6 +43,8 @@ class PracticeDICOM(Dataset):
 
 
 class DirectionRGB(Dataset):
+    label_mapping = {"up": 0, "right": 1, "down": 2, "left": 3}
+
     def __init__(self, image_list_path, transform=None, target_transform=None):
         self.image_list_path = image_list_path
         self.img_path, self.label = [], []
@@ -71,8 +73,7 @@ class DirectionRGB(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        label_mapping = {"up": 0, "right": 1, "down": 2, "left": 3}
-        numeric_label = label_mapping[label]
+        numeric_label = self.label_mapping[label]
 
         numeric_label = torch.tensor(numeric_label, dtype=torch.long)
         if self.target_transform:
@@ -82,6 +83,8 @@ class DirectionRGB(Dataset):
 
 
 class GenderRGB(Dataset):
+    label_mapping = {"male": 0, "female": 1}
+
     def __init__(
         self,
         directory: str,
@@ -90,7 +93,6 @@ class GenderRGB(Dataset):
         target_transform=None,
     ):
         self.image_list_path = os.path.join(directory, f"list_{task}.txt")
-        self.label_mapping = {"male": 0, "female": 1}
         self.img_path, self.label = [], []
         with open(self.image_list_path, "r") as file:
             for line in file:
