@@ -4,16 +4,18 @@ import warnings
 from datetime import datetime
 
 import datasets as warmup_datsets
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import utils
-from torchvision.models import (
-    ResNet18_Weights,
-    ResNet50_Weights,
-    resnet18,
-    resnet50,
-)
+
+# from pytorch_grad_cam import GradCAM
+# from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from sklearn.metrics import accuracy_score, roc_auc_score
+from torchvision.models import ResNet18_Weights, ResNet50_Weights, resnet18, resnet50
 
 warnings.filterwarnings("ignore")
 
@@ -41,24 +43,65 @@ class WarmUpResNet(nn.Module):
             self.resnet = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
         elif backbone == "resset50":
             self.resnet = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
-        self.fc = nn.Linear(self.resnet.fc.out_features, self.n_classes)
+
+        self.fc1 = nn.Linear(self.resnet.fc.out_features, 512)
+        self.fc2 = nn.Linear(512, self.n_classes)
+        self.dropout = nn.Dropout(0.5)
         if self.mode == "classification":
             self.logsftmx = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         x = self.resnet(x)
-        x = self.fc(x)
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
         if self.mode == "classification":
             x = self.logsftmx(x)
         return x
 
 
+class UNet(nn.Module):
+    def __init__(self):
+        super(UNet, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=3, padding=1),  # Changed input channels from 1 to 3
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.decoder = nn.Sequential(
+            nn.Conv2d(128, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(64, 1, kernel_size=2, stride=2)  # Changed output channels from 1 to 3
+        )
+
+    def forward(self, x):
+        x1 = self.encoder(x)
+        x2 = self.decoder(torch.cat([x1, x1], dim=1))
+        return x2
+
+
 def train_model(
-    model, loss_fn, optimizer, dataloaders, dataset_sizes, num_epochs, mode
+    model,
+    loss_fn,
+    optimizer,
+    dataloaders,
+    dataset_sizes,
+    num_epochs,
+    mode,
+    early_stopping=False,
+    patience=3,
 ):
     model.train()
     train_losses = []
     val_losses = []
+
+    best_val_loss = float("inf")
+    patience_counter = 0
+
     for epoch in range(num_epochs):
         print(f"Epoch {epoch}/{num_epochs - 1}")
         print("-" * 10)
@@ -102,6 +145,17 @@ def train_model(
                 train_losses.append(epoch_loss)
             else:
                 val_losses.append(epoch_loss)
+                if early_stopping and epoch_loss < best_val_loss:
+                    best_val_loss = epoch_loss
+                    patience_counter = 0
+                elif early_stopping:
+                    patience_counter += 1
+                    if patience_counter >= patience:
+                        print(
+                            f"Early stopping triggered after {patience} epochs"
+                            " without improvement."
+                        )
+                        return model, train_losses, val_losses
 
     return model, train_losses, val_losses
 
@@ -111,36 +165,105 @@ def test_model(model, loss_fn, dataloader, dataset_size, mode):
     test_loss = 0.0
     test_corrects = 0
 
-    last_batch_images, last_batch_prediciton, last_batch_target = (
+    last_batch_images, last_batch_prediction, last_batch_target = (
         None,
         None,
         None,
     )
+
+    all_predictions = []
+    all_targets = []
+    all_outputs = []
+    dice_coefficients = []
+    iou_scores = []
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(dataloader):
             inputs, labels = inputs.to(device), labels.to(device)
 
             outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
+            if mode == "segmentation":
+                # prediction masks
+                preds = torch.argmax(outputs, dim=1)
+                output_binary = outputs > 0.5
+                target_binary = outputs > 0.5
+                
+                intersection = (output_binary & target_binary).sum().item()
+                union = (output_binary | target_binary).sum().item()
+                # print(output)
+                dice_coefficient = (2.0 * intersection) / (output_binary.sum().item() + target_binary.sum().item())
+                iou_score = intersection / union
+                
+                dice_coefficients.append(dice_coefficient)
+                iou_scores.append(iou_score)
+            else:
+                _, preds = torch.max(outputs, 1)
             loss = loss_fn(outputs, labels)
 
             test_loss += loss.item() * inputs.size(0)
             if mode == "classification":
                 test_corrects += torch.sum(preds == labels.data)
+            # elif mode == "regression":
+                # Calculate MAE
+                # test_loss += torch.sum(torch.abs(outputs - labels)).item()
 
+            all_outputs.append(outputs.cpu().numpy())
+            all_predictions.append(preds.cpu().numpy())
+            all_targets.append(labels.cpu().numpy())
+            
             last_batch_images = inputs.cpu()
-            last_batch_prediciton = preds.cpu()
+            last_batch_prediction = preds.cpu()
             last_batch_target = labels.cpu()
 
     test_loss = test_loss / dataset_size
     if mode == "classification":
         test_acc = test_corrects.double() / dataset_size
         print(f"Test Loss: {test_loss:.4f} Acc: {test_acc:.4f}")
+
+        # Calculate AUC
+        auc = roc_auc_score(all_targets, np.array(all_predictions))
+        print(f"AUC: {auc:.4f}")
+    elif mode == "regression":
+        mae = test_loss / dataset_size
+        mae = torch.sum(torch.abs(all_outputs - all_targets)).item()
+        print(f"Test Loss: {test_loss:.4f} MAE: {mae:.4f}")
+    elif mode == "segmentation":
+
+        mean_dice_coefficient = np.mean(dice_coefficients)
+        mean_iou_score = np.mean(iou_scores)
+        print('Mean Dice Coefficient: {:.4f}'.format(mean_dice_coefficient))
+        print('Mean IoU Score: {:.4f}'.format(mean_iou_score))
+
+        all_predictions = torch.from_numpy(np.array(all_predictions))
+        all_targets = torch.from_numpy(np.array(all_targets))
+        print("all_outputs type:" , type(all_outputs))
+        print("all_targets type:" , type(all_targets))
+        print("all_predictions type:" , type(all_predictions))
+        # dice_coefficient = utils.calculate_dice(torch.from_numpy(np.array(all_predictions)),
+        #                                         torch.from_numpy(np.array(all_targets)))
+        # iou = utils.calculate_iou(all_predictions,
+        #                           all_targets)
+        # print(f"Dice Coefficient: {dice_coefficient:.4f}, IoU: {iou:.4f}")
+
     else:
         print(f"Test Loss: {test_loss:.4f}")
 
-    return last_batch_images, last_batch_prediciton, last_batch_target
+    # target_layers = [model.resnet.layer4[-1]]
+    # cam = GradCAM(model=model, target_layers=target_layers)
+    # cam_targets = [ClassifierOutputTarget(x) for x in last_batch_target]
+    # grayscale_cam = cam(
+    #     input_tensor=last_batch_images.detach().clone(), targets=cam_targets
+    # )
+
+    # In this example grayscale_cam has only one image in the batch:
+    # grayscale_cams = grayscale_cam[0, :]
+    # visualization = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+    return (
+        last_batch_images,
+        last_batch_prediction,
+        last_batch_target,
+        # grayscale_cams,
+    )
 
 
 def parse_args():
@@ -151,6 +274,18 @@ def parse_args():
         "mode",
         choices=["train", "test"],
         help='Choose "train" or "test" mode',
+    )
+    parser.add_argument(
+        "--type",
+        default="classification",
+        choices=["classification", "regression", "segmentation"],
+        help='Choose "classification", "segmentation" or "regression" mode',
+    )
+    parser.add_argument(
+        "--optimizer",
+        default="adam",
+        choices=["adam", "sgd", "adagrad"],
+        help='Choose "classification" or "regression" mode',
     )
     parser.add_argument(
         "--lr",
@@ -166,7 +301,7 @@ def parse_args():
     )
     parser.add_argument(
         "--data",
-        choices=["direction", "gender", "age"],
+        choices=["direction", "gender", "age", "segmentation01"],
         help="Choose data that you want to use",
     )
     parser.add_argument(
@@ -220,7 +355,7 @@ if __name__ == "__main__":
 
         os.makedirs(exp_directory, exist_ok=True)
 
-        utils.split_train_to_val(args.data, args.data_dir, val_ratio=0.2)
+        utils.split_train_to_val(args.data, args.data_dir, val_ratio=0.1)
 
         dataloaders, dataset_sizes = utils.get_dataloaders(
             args.data, args.data_dir, ["train", "val"]
@@ -235,7 +370,17 @@ if __name__ == "__main__":
         elif args.data == "age":
             model = WarmUpResNet(1, mode="regression")
             loss_fn = nn.MSELoss()
-        optimizer = optim.SGD(model.parameters(), lr=args.lr)
+        elif args.data == "segmentation01":
+            # model = UNet(3, 1)
+            model = UNet()
+            loss_fn = nn.MSELoss()
+
+        if args.optimizer == "sgd":
+            optimizer = optim.SGD(model.parameters(), lr=args.lr)
+        elif args.optimizer == "adam":
+            optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        elif args.optimizer == "adagrad":
+            optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
 
         model = model.to(device)
         trained_model, train_losses, val_losses = train_model(
@@ -245,7 +390,7 @@ if __name__ == "__main__":
             dataloaders,
             dataset_sizes,
             args.epochs,
-            args.mode,
+            args.type,
         )
 
         utils.plot_loss(
@@ -276,7 +421,10 @@ if __name__ == "__main__":
         elif args.data == "age":
             model = WarmUpResNet(1, mode="regression")
             loss_fn = nn.MSELoss()
-        optimizer = optim.SGD(model.parameters(), lr=args.lr)
+        elif args.data == "segmentation01":
+            # model = UNet(3, 1)
+            model = UNet()
+            loss_fn = nn.MSELoss()
         model.to(device)
 
         if args.trained_weights_path:
@@ -288,12 +436,13 @@ if __name__ == "__main__":
             last_batch_images,
             last_batch_prediciton,
             last_batch_target,
+            # grayscale_cams,
         ) = test_model(
             model,
             loss_fn,
             dataloaders["test"],
             dataset_sizes["test"],
-            args.mode,
+            args.type,
         )
 
         exp_directory, weight_filename = os.path.split(
@@ -303,12 +452,15 @@ if __name__ == "__main__":
             inv_map = warmup_datsets.DirectionRGB.inverse_label_mapping
         elif args.data == "gender":
             inv_map = warmup_datsets.GenderRGB.inverse_label_mapping
-        elif args.data == "age":
+        elif args.data == "age" or args.data == "segmentation01":
             inv_map = None
+
         utils.plot_images(
+            args.type,
             last_batch_images[:8],
             last_batch_prediciton[:8],
             last_batch_target[:8],
+            # grayscale_cams[:8],
             inv_map,
             os.path.join(exp_directory, "test-results.png"),
         )

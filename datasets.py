@@ -1,9 +1,10 @@
 import os
 
 import torch
+from PIL import Image
 from pydicom import dcmread
 from torch.utils.data import Dataset
-from torchvision.io import read_image
+from torchvision.io import ImageReadMode, read_image
 
 
 class PracticePNGJPG(Dataset):
@@ -68,7 +69,7 @@ class DirectionRGB(Dataset):
         label = self.label[idx]
 
         img = read_image(
-            os.path.join(os.path.dirname(self.image_list_path), img_path)
+            os.path.join(os.path.dirname(self.image_list_path), img_path).replace("\\","/")
         )
 
         if self.transform:
@@ -85,7 +86,7 @@ class DirectionRGB(Dataset):
 
 class GenderRGB(Dataset):
     label_mapping = {"male": 0, "female": 1}
-    inverse_label_mapping = {0: "male", 1: "female"}
+    inverse_label_mapping = {0: "male", 1: "female", 2: "down", 3: "left"}
 
     def __init__(
         self,
@@ -115,7 +116,7 @@ class GenderRGB(Dataset):
         label = self.label[idx]
 
         img = read_image(
-            os.path.join(os.path.dirname(self.image_list_path), img_path)
+            os.path.join(os.path.dirname(self.image_list_path), img_path).replace("\\","/")
         )
 
         if self.transform:
@@ -139,12 +140,12 @@ class AgeRGB(Dataset):
         target_transform=None,
     ):
         self.directory = directory
-        self.image_list_path = os.path.join(directory, f"{task}data.csv")
+        self.image_list_path = os.path.join(directory, "XP", f"{task}data.csv")
         self.img_name, self.label = [], []
         with open(self.image_list_path, "r") as file:
             for line in file:
                 line = line.strip()
-                if line:
+                if line and line.split(",")[0] != "filenames":
                     file_path, label = line.split(",")
                     self.img_name.append(file_path)
                     self.label.append(label)
@@ -157,21 +158,63 @@ class AgeRGB(Dataset):
 
     def __getitem__(self, idx):
         img_path = os.path.join(
-            self.directory, "XP", "JPGs", self.img_path[idx]
-        )
+            self.directory, "XP", "JPGs", self.img_name[idx]
+        ).replace("\\","/")
         label = self.label[idx]
 
-        img = read_image(
-            os.path.join(os.path.dirname(self.image_list_path), img_path)
-        )
-
+        img = read_image(img_path)
+        img = img.repeat(3, 1, 1)
         if self.transform:
             img = self.transform(img)
 
-        numeric_label = label
+        numeric_label = int(label)
 
-        numeric_label = torch.tensor(numeric_label, dtype=torch.long)
+        numeric_label = torch.tensor(numeric_label, dtype=torch.float)
         if self.target_transform:
             numeric_label = self.target_transform(numeric_label)
 
         return img, numeric_label
+
+
+class Segmentation01(Dataset):
+    def __init__(
+        self,
+        directory: str,
+        task: str,
+        transform=None,
+        target_transform=None,
+    ):
+        self.directory = directory
+        self.image_list_path = os.path.join(directory, f"list_{task}.txt")
+        self.img_name, self.label_name = [], []
+        with open(self.image_list_path, "r") as file:
+            for line in file:
+                line = line.strip()
+                if line and line.split(",")[0] != "filenames":
+                    file_path, label_path = line.split(",")
+                    self.img_name.append(file_path)
+                    self.label_name.append(label_path)
+
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.label_name)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(
+            self.directory, self.img_name[idx]
+        ).replace("\\","/")
+        label_path = os.path.join(
+            self.directory, self.label_name[idx]
+        ).replace("\\","/")
+
+        img = Image.open(img_path).convert("L")
+        label = Image.open(label_path).convert("L")
+        if self.transform:
+            img = self.transform(img)
+
+        if self.target_transform:
+            label = self.target_transform(label)
+
+        return img, label

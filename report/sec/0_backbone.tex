@@ -1,0 +1,7 @@
+\section{Backbone models}
+    Training a model from scratch consumes substantial resources, including data and time, which may not always be feasible. In scenarios where large datasets are lacking, transfer learning emerges as a practical solution. Transfer learning involves leveraging a pre-trained network with existing weights and fine-tuning it on a new dataset. Typically, backbone models are utilized in the initial layers as they excel at capturing fundamental features. Following these backbone networks, additional layers such as a linear layer or another classifier can be incorporated to adapt to the nuances of the new dataset.
+
+    \subsection{ResNet}
+    ResNet, an abbreviation for Residual Network, was pioneered by Kaiming He et al. \cite{he2016deep}. Its hallmark innovation lies in the incorporation of residual connections, a breakthrough technique that remains integral in contemporary state-of-the-art networks, transcending beyond the realm of computer vision tasks. ResNet manifests in various versions, distinguished by the number of layers, including ResNet18, ResNet50, and beyond. Its widespread adoption stems from its capacity to facilitate the utilization of extremely deep networks, a feat made possible by the introduction of residual connections.
+
+    ResNet models are trained on ImageNet dataset, thus it have 1000 output nodes. In order to use it for our problems, we have to append few linear layers after this backbone layer.
