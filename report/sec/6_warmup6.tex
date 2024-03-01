@@ -1,0 +1,15 @@
+\section{Multiple Segmentation}
+\label{sec:warmup6}
+
+    We were given chest X-ray images of patients and corresponding mask image. The mask image have a total of $4$ masks; lungs, heart, body, and background. Our task is to create a model and train it to generate these segmentation masks.
+
+\subsection{Dataset}
+    The provided dataset have $200$ training x-ray images and $47$ testing images. As there was no validtion set, I have randomly splited the training dataset into validation and training set in ration 1:9 respictively. Validation set is important as it allows one to verify model performance on hold-out set.
+
+\subsection{Training}
+
+    This problem and the previous problems are similar in a way the only difference is that in this problem there are 4 masks instead of one. The same model (\cref{fig:unet_lung}) after modifying the last layer can be utilized for this task. The output channel needs to be changed from $1$ to $4$. 
+    
+    The dataset also needs to be modified. The label images, which are grayscale images, needs to be changed to 4 channel images, in which each channel have only one mask. 
+
+    The task is incomplete as expected result was not received in last proble,

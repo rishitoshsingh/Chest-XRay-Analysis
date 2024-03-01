@@ -70,6 +70,7 @@ class UNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
+        self.sigmoid = nn.Sigmoid()
         self.decoder = nn.Sequential(
             nn.Conv2d(128, 64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
@@ -81,7 +82,7 @@ class UNet(nn.Module):
     def forward(self, x):
         x1 = self.encoder(x)
         x2 = self.decoder(torch.cat([x1, x1], dim=1))
-        return x2
+        return self.sigmoid(x2) 
 
 
 def train_model(
@@ -373,7 +374,7 @@ if __name__ == "__main__":
         elif args.data == "segmentation01":
             # model = UNet(3, 1)
             model = UNet()
-            loss_fn = nn.MSELoss()
+            loss_fn = nn.BCELoss()
 
         if args.optimizer == "sgd":
             optimizer = optim.SGD(model.parameters(), lr=args.lr)
@@ -424,7 +425,7 @@ if __name__ == "__main__":
         elif args.data == "segmentation01":
             # model = UNet(3, 1)
             model = UNet()
-            loss_fn = nn.MSELoss()
+            loss_fn = nn.BCELoss()
         model.to(device)
 
         if args.trained_weights_path:
@@ -455,6 +456,7 @@ if __name__ == "__main__":
         elif args.data == "age" or args.data == "segmentation01":
             inv_map = None
 
+        
         utils.plot_images(
             args.type,
             last_batch_images[:8],
