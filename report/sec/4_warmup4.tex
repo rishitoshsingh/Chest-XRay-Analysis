@@ -1,12 +1,12 @@
-\section{Age}
+\subsection{Find patient age from XRay}
 \label{sec:warmup4}
 
     We were given chest X-ray images of patients using which we have to fine-tune a model to determine the age of patients.
 
-\subsection{Dataset}
-    The provided dataset have $80$ training x-ray images and $165$ testing images. As there was no validtion set, I have randomly splited the training dataset into validation and training set in ration 1:9 respictively. The images in this dataset were color image with shape $2048$x$2048$, which is resized to image of size $224$x$224$.
+\subsubsection{Dataset}
+    The provided dataset have $80$ training x-ray images and $165$ testing images. As there was no validtion set, I have randomly splited the training dataset into validation and training set in ration 1:9 respictively. The images in this dataset were color image with shape $2048 \times 2048$, which is resized to image of size $224 \times 224$.
 
-\subsection{Training}
+\subsubsection{Training}
 
     This is a regression problem, thus a few changes is required to the model used in classifying gender of patients. The last Log Softmax layer is not required, thus eliminated from the model graph as shown in \cref{fig:age_model}. The model is trained using mean ssquare error function with Adam optimizer having a learning rate of $0.003$. Additionally, in this experiment too, early stopping with a patience of 3 epochs is implemented to halt the model training. \Cref{fig:gender-learning-curve} illustrates the learning curve of the training and validation sets.
 
@@ -17,11 +17,11 @@
         \label{fig:age-learning-curve}
     \end{figure}
 
-\subsection{Results}
+\subsubsection{Results}
 
     \begin{figure}[!htbp]
         \centering
-        \includegraphics[width=\linewidth]{../outputs/age/age1/test-results.png}
+        \includegraphics[width=\linewidth]{../outputs/age/age1/test-results-cropped.png}
         \caption{Age predictions on few samples of test data}
         \label{fig:age-results}
     \end{figure} 
