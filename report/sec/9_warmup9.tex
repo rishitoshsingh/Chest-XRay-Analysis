@@ -13,44 +13,45 @@
 
   The embeddings of all the xrays are used to find $4$ clusters using KMeans clustering algorithm. For testing this learned clusters, I have taken "up" and "normal" xrays as a single class because they are ooriented correctly. The predicted clusters and original clusters are used to calculate rand index which came out to be $0.98$. This rand index means that the embeddings were enough to find cluster the xrays into $4$ clusters. This result can also be visualized using t-SNE in \cref{fig:tSNE}, which shows the perfect $4$ clusters.
 
-  \begin{figure*}[htbp]
+  \begin{figure}[!htbp]
     \centering
-    \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=0.8\linewidth]{../plots/unsupervised-orientation/tsne.png}
+    \caption{ }
+    \label{fig:tSNE}
+  \end{figure}
+
+  \begin{figure}[htbp]
+    \centering
+    \begin{subfigure}{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{../plots/unsupervised-orientation/result-up.png}
         \caption{ }
         \label{fig:unsup-orientation-up}
     \end{subfigure}
-    \begin{subfigure}{0.49\linewidth}
+    \begin{subfigure}{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{../plots/unsupervised-orientation/result-right.png}
         \caption{ }
         \label{fig:unsup-orienation-right}
     \end{subfigure}
-    \begin{subfigure}{0.49\linewidth}
+    \begin{subfigure}{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{../plots/unsupervised-orientation/result-down.png}
         \caption{ }
         \label{fig:unsup-orienation-down}
     \end{subfigure}
-    \begin{subfigure}{0.49\linewidth}
+    \begin{subfigure}{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{../plots/unsupervised-orientation/result-left.png}
         \caption{ }
         \label{fig:unsup-orienation-left}
     \end{subfigure}
-    \begin{subfigure}{0.49\linewidth}
+    \begin{subfigure}{0.9\linewidth}
         \centering
         \includegraphics[width=\linewidth]{../plots/unsupervised-orientation/result-trained-xrays.png}
         \caption{ }
         \label{fig:unsup-trained-image}
     \end{subfigure}
-  \end{figure*}
+  \end{figure}
 
 
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=\linewidth]{../plots/unsupervised-orientation/tsne.png}
-    \caption{ }
-    \label{fig:tSNE}
-\end{figure}
